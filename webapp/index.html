@@ -1,10 +1,333 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Мой тестовый сайт</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Дневник настроения ❤️</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 45px;
+            padding: 30px 25px 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            display: inline-block;
+            padding-bottom: 8px;
+        }
+
+        .mood-buttons {
+            display: flex;
+            justify-content: space-around;
+            gap: 12px;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        .mood-btn {
+            background: white;
+            border: none;
+            font-size: 52px;
+            padding: 18px;
+            border-radius: 70px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            min-width: 85px;
+        }
+
+        .mood-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .mood-btn:active {
+            transform: translateY(2px) scale(0.95);
+        }
+
+        /* Индивидуальные цвета при наведении */
+        .mood-btn[data-mood="happy"]:hover { background: #FFF9C4; }
+        .mood-btn[data-mood="normal"]:hover { background: #E0F2FE; }
+        .mood-btn[data-mood="sad"]:hover { background: #E1F5FE; }
+        .mood-btn[data-mood="love"]:hover { background: #FFE4E1; }
+        .mood-btn[data-mood="angry"]:hover { background: #FFEBEE; }
+
+        #status {
+            background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+            padding: 15px 20px;
+            border-radius: 35px;
+            margin: 20px 0;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .history-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .history-btn:active {
+            transform: translateY(1px);
+        }
+
+        .footer {
+            margin-top: 25px;
+            font-size: 11px;
+            color: #aaa;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .emoji-deco {
+            font-size: 20px;
+            opacity: 0.6;
+        }
+
+        /* Анимация для успешного сохранения */
+        @keyframes successPulse {
+            0% { transform: scale(1); background: #e8f5e9; }
+            50% { transform: scale(1.02); background: #c8e6c9; }
+            100% { transform: scale(1); background: #e8f5e9; }
+        }
+
+        .success-animation {
+            animation: successPulse 0.5s ease-out;
+        }
+    </style>
 </head>
 <body>
-    <h1>Привет, мир!</h1>
-    <p>Это тестовая страница для настройки GitHub Pages.</p>
+    <div class="container">
+        <h1>
+            <span>🌸</span>
+            Дневник настроения
+            <span>🌷</span>
+        </h1>
+        <div class="subtitle">Как ты себя чувствуешь?</div>
+        
+        <div class="mood-buttons">
+            <button class="mood-btn" data-mood="happy" title="Счастлива">😊</button>
+            <button class="mood-btn" data-mood="normal" title="Нормально">😐</button>
+            <button class="mood-btn" data-mood="sad" title="Грустно">😔</button>
+            <button class="mood-btn" data-mood="love" title="Влюблён">🥰</button>
+            <button class="mood-btn" data-mood="angry" title="Злюсь">😠</button>
+        </div>
+        
+        <button class="history-btn" id="historyBtn">
+            📅 Посмотреть историю
+        </button>
+        
+        <div id="status">
+            ✨ Нажми на смайлик, чтобы поделиться настроением ✨
+        </div>
+        <div class="footer">
+            ❤️ Твоё настроение сохраняется и будет видно в графике ❤️
+        </div>
+    </div>
+
+    <script>
+        // Получаем данные о пользователе из Telegram WebApp
+        let tg = window.Telegram?.WebApp;
+        let userId = 'unknown';
+        
+        if (tg) {
+            tg.ready();
+            userId = tg.initDataUnsafe?.user?.id || 'unknown';
+            tg.expand(); // Разворачиваем на весь экран
+            tg.enableClosingConfirmation(); // Спрашивать подтверждение при закрытии
+        }
+        
+        // Функция отправки настроения боту
+        async function sendMood(mood) {
+            const statusDiv = document.getElementById('status');
+            const moodEmojis = {
+                'happy': '😊',
+                'normal': '😐',
+                'sad': '😔',
+                'love': '🥰',
+                'angry': '😠'
+            };
+            
+            // Показываем, что отправляем
+            statusDiv.innerHTML = `📤 Отправляю ${moodEmojis[mood]}...`;
+            statusDiv.style.background = '#E3F2FD';
+            
+            // ВАЖНО: Замени localhost на реальный адрес после деплоя!
+            // Пока для теста оставляем localhost, после деплоя заменишь на:
+            // const BOT_API_URL = 'https://твой-бот.onrender.com/mood';
+            const BOT_API_URL = 'http://localhost:5000/mood';
+            
+            try {
+                const response = await fetch(BOT_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        mood: mood,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = `✅ ${moodEmojis[mood]} Сохранено! Спасибо, что поделилась ❤️`;
+                    statusDiv.style.background = '#E8F5E9';
+                    statusDiv.classList.add('success-animation');
+                    
+                    // Через 3 секунды возвращаем исходное сообщение
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '✨ Нажми на смайлик, чтобы поделиться настроением ✨';
+                        statusDiv.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)';
+                        statusDiv.classList.remove('success-animation');
+                    }, 3000);
+                } else {
+                    throw new Error('Ошибка сервера');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                statusDiv.innerHTML = '❌ Не удалось сохранить. Проверь интернет или попробуй позже.';
+                statusDiv.style.background = '#FFEBEE';
+                
+                setTimeout(() => {
+                    if (statusDiv.innerHTML === '❌ Не удалось сохранить. Проверь интернет или попробуй позже.') {
+                        statusDiv.innerHTML = '✨ Нажми на смайлик, чтобы поделиться настроением ✨';
+                        statusDiv.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)';
+                    }
+                }, 4000);
+            }
+        }
+        
+        // Навешиваем обработчики на все кнопки настроения
+        document.querySelectorAll('.mood-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mood = btn.getAttribute('data-mood');
+                sendMood(mood);
+            });
+        });
+        
+        // Кнопка истории - отправляет команду боту
+        document.getElementById('historyBtn').addEventListener('click', () => {
+            if (tg) {
+                // Если внутри Telegram WebApp — закрываем приложение
+                tg.close();
+            }
+            // Отправляем команду боту (через глубокую ссылку)
+            const botUsername = 'MyLoveMood_bot';
+            window.location.href = `https://t.me/${botUsername}?start=history`;
+        });
+        
+        // Добавляем эффект пульсации при нажатии на кнопки
+        document.querySelectorAll('.mood-btn, .history-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                let ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                this.appendChild(ripple);
+                
+                let x = e.clientX - e.target.offsetLeft;
+                let y = e.clientY - e.target.offsetTop;
+                
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+        
+        // Добавляем стили для ripple-эффекта
+        const style = document.createElement('style');
+        style.textContent = `
+            .mood-btn, .history-btn {
+                position: relative;
+                overflow: hidden;
+            }
+            .ripple {
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.7);
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+            }
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Приветствие в консоль (для разработчика)
+        console.log('🌸 Дневник настроения загружен! Желаем хорошего настроения 🌸');
+    </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Дневник настроения ❤️</title>
@@ -266,10 +267,13 @@
         // Кнопка истории
         document.getElementById('historyBtn').addEventListener('click', () => {
             if (tg) {
+                // Отправляем команду боту через WebApp
+                tg.sendData(JSON.stringify({ action: 'history' }));
                 tg.close();
+            } else {
+                // Запасной вариант
+                window.location.href = `https://t.me/MyLoveMood_bot?command=history`;
             }
-            const botUsername = 'MyLoveMood_bot';
-            window.location.href = `https://t.me/${botUsername}?start=history`;
         });
         
         // Эффект пульсации

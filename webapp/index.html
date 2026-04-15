@@ -92,7 +92,6 @@
             transform: translateY(2px) scale(0.95);
         }
 
-        /* Индивидуальные цвета при наведении */
         .mood-btn[data-mood="happy"]:hover { background: #FFF9C4; }
         .mood-btn[data-mood="normal"]:hover { background: #E0F2FE; }
         .mood-btn[data-mood="sad"]:hover { background: #E1F5FE; }
@@ -145,12 +144,6 @@
             padding-top: 15px;
         }
 
-        .emoji-deco {
-            font-size: 20px;
-            opacity: 0.6;
-        }
-
-        /* Анимация для успешного сохранения */
         @keyframes successPulse {
             0% { transform: scale(1); background: #e8f5e9; }
             50% { transform: scale(1.02); background: #c8e6c9; }
@@ -159,6 +152,27 @@
 
         .success-animation {
             animation: successPulse 0.5s ease-out;
+        }
+
+        .mood-btn, .history-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+        
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -175,7 +189,7 @@
             <button class="mood-btn" data-mood="happy" title="Счастлива">😊</button>
             <button class="mood-btn" data-mood="normal" title="Нормально">😐</button>
             <button class="mood-btn" data-mood="sad" title="Грустно">😔</button>
-            <button class="mood-btn" data-mood="love" title="Влюблён">🥰</button>
+            <button class="mood-btn" data-mood="love" title="Влюблена">🥰</button>
             <button class="mood-btn" data-mood="angry" title="Злюсь">😠</button>
         </div>
         
@@ -187,24 +201,24 @@
             ✨ Нажми на смайлик, чтобы поделиться настроением ✨
         </div>
         <div class="footer">
-            ❤️ Твоё настроение сохраняется и будет видно в графике ❤️
+            ❤️ Твоё настроение сохраняется и будет видно в истории ❤️
         </div>
     </div>
 
     <script>
         // Получаем данные о пользователе из Telegram WebApp
         let tg = window.Telegram?.WebApp;
-        let userId = 'unknown';
         
         if (tg) {
             tg.ready();
-            userId = tg.initDataUnsafe?.user?.id || 'unknown';
-            tg.expand(); // Разворачиваем на весь экран
-            tg.enableClosingConfirmation(); // Спрашивать подтверждение при закрытии
+            tg.expand();
+            console.log('Telegram WebApp инициализирован');
+        } else {
+            console.warn('Telegram WebApp не обнаружен');
         }
         
-        // Функция отправки настроения боту
-        async function sendMood(mood) {
+        // Функция отправки настроения через sendData
+        function sendMood(mood) {
             const statusDiv = document.getElementById('status');
             const moodEmojis = {
                 'happy': '😊',
@@ -214,57 +228,32 @@
                 'angry': '😠'
             };
             
-            // Показываем, что отправляем
             statusDiv.innerHTML = `📤 Отправляю ${moodEmojis[mood]}...`;
             statusDiv.style.background = '#E3F2FD';
             
-            // ВАЖНО: Замени localhost на реальный адрес после деплоя!
-            // Пока для теста оставляем localhost, после деплоя заменишь на:
-            // const BOT_API_URL = 'https://твой-бот.onrender.com/mood';
-            const BOT_API_URL = 'http://localhost:5000/mood';
-            
-            try {
-                const response = await fetch(BOT_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        mood: mood,
-                        timestamp: new Date().toISOString()
-                    })
+            if (window.Telegram && window.Telegram.WebApp) {
+                const data = JSON.stringify({
+                    mood: mood,
+                    mood_emoji: moodEmojis[mood],
+                    timestamp: new Date().toISOString()
                 });
                 
-                if (response.ok) {
-                    statusDiv.innerHTML = `✅ ${moodEmojis[mood]} Сохранено! Спасибо, что поделилась ❤️`;
-                    statusDiv.style.background = '#E8F5E9';
-                    statusDiv.classList.add('success-animation');
-                    
-                    // Через 3 секунды возвращаем исходное сообщение
-                    setTimeout(() => {
-                        statusDiv.innerHTML = '✨ Нажми на смайлик, чтобы поделиться настроением ✨';
-                        statusDiv.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)';
-                        statusDiv.classList.remove('success-animation');
-                    }, 3000);
-                } else {
-                    throw new Error('Ошибка сервера');
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                statusDiv.innerHTML = '❌ Не удалось сохранить. Проверь интернет или попробуй позже.';
-                statusDiv.style.background = '#FFEBEE';
+                window.Telegram.WebApp.sendData(data);
+                
+                statusDiv.innerHTML = `✅ ${moodEmojis[mood]} Отправлено! Спасибо ❤️`;
+                statusDiv.style.background = '#E8F5E9';
+                statusDiv.classList.add('success-animation');
                 
                 setTimeout(() => {
-                    if (statusDiv.innerHTML === '❌ Не удалось сохранить. Проверь интернет или попробуй позже.') {
-                        statusDiv.innerHTML = '✨ Нажми на смайлик, чтобы поделиться настроением ✨';
-                        statusDiv.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)';
-                    }
-                }, 4000);
+                    window.Telegram.WebApp.close();
+                }, 1000);
+            } else {
+                statusDiv.innerHTML = '❌ Ошибка: не удалось подключиться к Telegram';
+                statusDiv.style.background = '#FFEBEE';
             }
         }
         
-        // Навешиваем обработчики на все кнопки настроения
+        // Навешиваем обработчики на кнопки настроения
         document.querySelectorAll('.mood-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const mood = btn.getAttribute('data-mood');
@@ -272,18 +261,16 @@
             });
         });
         
-        // Кнопка истории - отправляет команду боту
+        // Кнопка истории
         document.getElementById('historyBtn').addEventListener('click', () => {
             if (tg) {
-                // Если внутри Telegram WebApp — закрываем приложение
                 tg.close();
             }
-            // Отправляем команду боту (через глубокую ссылку)
             const botUsername = 'MyLoveMood_bot';
             window.location.href = `https://t.me/${botUsername}?start=history`;
         });
         
-        // Добавляем эффект пульсации при нажатии на кнопки
+        // Эффект пульсации
         document.querySelectorAll('.mood-btn, .history-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 let ripple = document.createElement('span');
@@ -302,32 +289,7 @@
             });
         });
         
-        // Добавляем стили для ripple-эффекта
-        const style = document.createElement('style');
-        style.textContent = `
-            .mood-btn, .history-btn {
-                position: relative;
-                overflow: hidden;
-            }
-            .ripple {
-                position: absolute;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.7);
-                transform: scale(0);
-                animation: ripple 0.6s linear;
-                pointer-events: none;
-            }
-            @keyframes ripple {
-                to {
-                    transform: scale(4);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Приветствие в консоль (для разработчика)
-        console.log('🌸 Дневник настроения загружен! Желаем хорошего настроения 🌸');
+        console.log('🌸 Дневник настроения загружен!');
     </script>
 </body>
 </html>

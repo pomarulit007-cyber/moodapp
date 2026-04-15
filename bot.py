@@ -158,3 +158,5 @@ if __name__ == '__main__':
     
     print("✅ Бот и веб-сервер запущены!")
     telegram_app.run_polling()
+    
+    

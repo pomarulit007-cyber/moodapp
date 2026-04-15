@@ -11,7 +11,7 @@
             box-sizing: border-box;
         }
 
-        body {
+        body { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -20,6 +20,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
         }
+        
 
         .container {
             background: rgba(255, 255, 255, 0.95);
@@ -177,6 +178,7 @@
     </style>
 </head>
 <body>
+    <div id="debug" style="background:yellow; padding:5px; font-size:10px; display:none;"></div>
     <div class="container">
         <h1>
             <span>🌸</span>
@@ -289,7 +291,25 @@
             });
         });
         
-        console.log('🌸 Дневник настроения загружен!');
+            console.log('🌸 Дневник настроения загружен!');
+            // Диагностика
+    const debugDiv = document.getElementById('debug');
+    function logDebug(msg) {
+        console.log(msg);
+        if (debugDiv) {
+            debugDiv.style.display = 'block';
+            debugDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
+        }
+    }
+
+    logDebug('Страница загружена');
+    logDebug('window.Telegram = ' + (window.Telegram ? 'есть' : 'нет'));
+    logDebug('window.Telegram?.WebApp = ' + (window.Telegram?.WebApp ? 'есть' : 'нет'));
+
+    if (!window.Telegram?.WebApp) {
+        logDebug('⚠️ ОШИБКА: Telegram WebApp не обнаружен!');
+        logDebug('Убедись, что открываешь приложение через кнопку бота в Telegram');
+    }
     </script>
 </body>
 </html>

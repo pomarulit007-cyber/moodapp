@@ -175,7 +175,6 @@
             }
         }
     </style>
-    <!-- Принудительная загрузка Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -212,62 +211,49 @@
     </div>
 
     <script>
-        // Инициализация Telegram WebApp
-        let tg = window.Telegram.WebApp;
+        // БЕЗОПАСНАЯ инициализация Telegram WebApp
+        let tg = null;
+        let BOT_API_URL = 'http://localhost:5000'; // ← ЗДЕСЬ ЗАМЕНИ НА СВОЙ IP ДЛЯ ТЕЛЕФОНА!
         
-        if (tg) {
+        if (window.Telegram && window.Telegram.WebApp) {
+            tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
             console.log('✅ Telegram WebApp инициализирован');
-            console.log('User ID:', tg.initDataUnsafe?.user?.id);
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                console.log('✅ User ID:', tg.initDataUnsafe.user.id);
+            } else {
+                console.warn('⚠️ Нет данных о пользователе');
+            }
         } else {
             console.error('❌ Telegram WebApp не загрузился!');
         }
         
-        // Функция отправки настроения через fetch
+        // Функция отправки настроения
         function sendMood(mood) {
             const statusDiv = document.getElementById('status');
             const moodEmojis = {
-                'happy': '😊',
-                'normal': '😐',
-                'sad': '😔',
-                'love': '🥰',
-                'angry': '😠'
+                'happy': '😊', 'normal': '😐', 'sad': '😔', 'love': '🥰', 'angry': '😠'
             };
             
             statusDiv.innerHTML = `📤 Отправляю ${moodEmojis[mood]}...`;
             statusDiv.style.background = '#E3F2FD';
             
-            // Получение ID пользователя
-            let userId = 'unknown';
-            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                userId = String(tg.initDataUnsafe.user.id);
-            }
+            let userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : 'unknown';
             
-            console.log('Отправка настроения:', { mood, userId });
-            
-            // Отправляем на Flask сервер
-            fetch('http://localhost:5000/mood', {
+            fetch(`${BOT_API_URL}/mood`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: userId,
-                    mood: mood,
-                    timestamp: new Date().toISOString()
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, mood: mood, timestamp: new Date().toISOString() })
             })
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 if (data.status === 'ok') {
                     statusDiv.innerHTML = `✅ ${moodEmojis[mood]} Сохранено! ❤️`;
                     statusDiv.style.background = '#E8F5E9';
-                    statusDiv.classList.add('success-animation');
                     setTimeout(() => {
                         statusDiv.innerHTML = '✨ Нажми на смайлик, чтобы поделиться настроением ✨';
                         statusDiv.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)';
-                        statusDiv.classList.remove('success-animation');
                     }, 2000);
                 } else {
                     throw new Error(data.message);
@@ -280,54 +266,41 @@
             });
         }
         
-        // Навешиваем обработчики на кнопки настроения
+        // Кнопки настроения
         document.querySelectorAll('.mood-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const mood = btn.getAttribute('data-mood');
-                sendMood(mood);
-            });
+            btn.addEventListener('click', () => sendMood(btn.getAttribute('data-mood')));
         });
         
-        // Кнопка очистки истории (теперь через fetch на Flask)
+        // Кнопка очистки
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (!tg) {
-                console.error('Нет подключения к Telegram');
+                alert('Нет подключения к Telegram');
                 return;
             }
             
-            const confirmed = confirm('⚠️ ТОЧНО удалить ВСЕ записи о настроении? Это нельзя отменить!');
-            if (!confirmed) return;
+            if (!confirm('⚠️ ТОЧНО удалить ВСЕ записи о настроении?')) return;
             
             const statusDiv = document.getElementById('status');
             statusDiv.innerHTML = '🗑️ Очищаю историю...';
-            statusDiv.style.background = '#E3F2FD';
             
             try {
-                const response = await fetch('http://localhost:5000/clear', {
+                const userId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : 'unknown';
+                const response = await fetch(`${BOT_API_URL}/clear`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        user_id: tg.initDataUnsafe?.user?.id || 'unknown'
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
                 });
-                
                 const data = await response.json();
                 
                 if (data.status === 'ok') {
                     statusDiv.innerHTML = '✅ История очищена!';
-                    statusDiv.style.background = '#E8F5E9';
-                    setTimeout(() => {
-                        tg.close();
-                    }, 1000);
+                    setTimeout(() => tg.close(), 1000);
                 } else {
                     throw new Error(data.message);
                 }
             } catch (error) {
                 console.error('Ошибка очистки:', error);
                 statusDiv.innerHTML = '❌ Не удалось очистить историю';
-                statusDiv.style.background = '#FFEBEE';
             }
         });
         
@@ -345,16 +318,11 @@
                 let ripple = document.createElement('span');
                 ripple.classList.add('ripple');
                 this.appendChild(ripple);
-                
                 let x = e.clientX - e.target.offsetLeft;
                 let y = e.clientY - e.target.offsetTop;
-                
                 ripple.style.left = `${x}px`;
                 ripple.style.top = `${y}px`;
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 600);
+                setTimeout(() => ripple.remove(), 600);
             });
         });
         

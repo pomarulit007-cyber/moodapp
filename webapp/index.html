@@ -110,8 +110,8 @@
             border: 1px solid rgba(255,255,255,0.5);
         }
 
-        .history-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .clear-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             border: none;
             padding: 14px 28px;
@@ -121,18 +121,18 @@
             cursor: pointer;
             margin-top: 10px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
             display: inline-flex;
             align-items: center;
             gap: 10px;
         }
 
-        .history-btn:hover {
+        .clear-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 8px 25px rgba(240, 147, 251, 0.5);
         }
 
-        .history-btn:active {
+        .clear-btn:active {
             transform: translateY(1px);
         }
 
@@ -154,7 +154,7 @@
             animation: successPulse 0.5s ease-out;
         }
 
-        .mood-btn, .history-btn {
+        .mood-btn, .clear-btn {
             position: relative;
             overflow: hidden;
         }
@@ -194,26 +194,22 @@
             <button class="mood-btn" data-mood="angry" title="Злюсь">😠</button>
         </div>
         
-        <button class="history-btn" id="clearBtn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); margin-top: 10px;">
+        <button class="clear-btn" id="clearBtn">
             🗑️ Очистить все записи
-        </button>
-        
-        <button class="history-btn" id="historyBtn">
-            📅 Посмотреть историю
         </button>
         
         <div id="status">
             ✨ Нажми на смайлик, чтобы поделиться настроением ✨
         </div>
         <div class="footer">
-            ❤️ Твоё настроение сохраняется и будет видно в истории ❤️
+            ❤️ Твоё настроение сохраняется<br>
+            📝 История доступна по команде /history
         </div>
     </div>
 
     <script>
-        // БЕЗОПАСНАЯ инициализация Telegram WebApp
         let tg = null;
-        let BOT_API_URL = 'http://localhost:5000'; // ← ЗДЕСЬ ЗАМЕНИ НА СВОЙ IP ДЛЯ ТЕЛЕФОНА!
+        let BOT_API_URL = 'http://localhost:5000'; // заменить на свой ip телефона
         
         if (window.Telegram && window.Telegram.WebApp) {
             tg = window.Telegram.WebApp;
@@ -271,14 +267,14 @@
             btn.addEventListener('click', () => sendMood(btn.getAttribute('data-mood')));
         });
         
-        // Кнопка очистки истории
+        // Кнопка очистки
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (!tg) {
                 alert('Нет подключения к Telegram');
                 return;
             }
             
-            if (!confirm('⚠️ ТОЧНО удалить ВСЕ записи о настроении?')) return;
+            if (!confirm('⚠️ ТОЧНО удалить ВСЕ записи о настроении? Это нельзя отменить!')) return;
             
             const statusDiv = document.getElementById('status');
             statusDiv.innerHTML = '🗑️ Очищаю историю...';
@@ -304,17 +300,8 @@
             }
         });
         
-        // Кнопка истории - работает через команду /history
-        document.getElementById('historyBtn').addEventListener('click', () => {
-            if (tg) {
-                tg.close();
-            }
-            // Открываем чат с ботом и передаём параметр history
-            window.location.href = 'https://t.me/MyLoveMood_bot?start=history';
-        });
-        
         // Эффект пульсации
-        document.querySelectorAll('.mood-btn, .history-btn').forEach(btn => {
+        document.querySelectorAll('.mood-btn, .clear-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 let ripple = document.createElement('span');
                 ripple.classList.add('ripple');

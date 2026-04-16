@@ -304,12 +304,12 @@
             }
         });
         
-        // Кнопка истории
+
         document.getElementById('historyBtn').addEventListener('click', () => {
             if (tg) {
-                tg.sendData(JSON.stringify({ action: 'history' }));
                 tg.close();
             }
+            window.location.href = 'https://t.me/MyLoveMood_bot?start=history';
         });
         
         // Эффект пульсации

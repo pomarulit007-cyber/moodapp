@@ -48,18 +48,24 @@ if "unknown" in moods_data and REAL_USER_ID:
     save_moods(moods_data)
     print("✅ Данные из 'unknown' перенесены в твой ID!")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[
-        {"text": "🌸 Открыть дневник настроения", "web_app": {"url": WEBAPP_URL}}
-    ]]
-    reply_markup = {"inline_keyboard": keyboard}
-    
-    await update.message.reply_text(
-        "Привет, любимая! 🌷\n\n"
-        "Я буду запоминать твоё настроение каждый день.\n"
-        "Нажми на кнопку ниже, чтобы открыть дневник и выбрать смайлик:",
-        reply_markup=reply_markup
-    )
+    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+        if context.args and context.args[0] == 'history':
+
+            await history(update, context)
+            return
+        
+        keyboard = [[
+            {"text": "🌸 Открыть дневник настроения", "web_app": {"url": WEBAPP_URL}}
+        ]]
+        reply_markup = {"inline_keyboard": keyboard}
+        
+        await update.message.reply_text(
+            "Привет, любимая! 🌷\n\n"
+            "Я буду запоминать твоё настроение каждый день.\n"
+            "Нажми на кнопку ниже, чтобы открыть дневник и выбрать смайлик:",
+            reply_markup=reply_markup
+        )
 
 async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)

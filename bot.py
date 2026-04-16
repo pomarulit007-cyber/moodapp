@@ -8,6 +8,7 @@ import json
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 # ===== НАСТРОЙКИ =====
@@ -191,18 +192,18 @@ def index():
     return jsonify({"status": "ok", "message": "Бот для дневника настроения работает"}), 200
 
 # Устанавливаем вебхук при запуске
-def set_webhook():
+async def set_webhook():
     webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
-    telegram_app.bot.set_webhook(url=webhook_url)
+    await telegram_app.bot.set_webhook(url=webhook_url)
     print(f"✅ Webhook установлен на {webhook_url}")
 
 # ===== ЗАПУСК =====
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     
-    # Устанавливаем вебхук ДО запуска Flask
+    import asyncio
     webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
-    telegram_app.bot.set_webhook(url=webhook_url)
+    asyncio.run(telegram_app.bot.set_webhook(url=webhook_url))
     print(f"✅ Webhook установлен на {webhook_url}")
     
     # Запускаем Flask сервер

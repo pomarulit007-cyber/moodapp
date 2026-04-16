@@ -271,7 +271,7 @@
             btn.addEventListener('click', () => sendMood(btn.getAttribute('data-mood')));
         });
         
-        // Кнопка очистки
+        // Кнопка очистки истории
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (!tg) {
                 alert('Нет подключения к Telegram');
@@ -304,11 +304,12 @@
             }
         });
         
-
+        // Кнопка истории - работает через команду /history
         document.getElementById('historyBtn').addEventListener('click', () => {
             if (tg) {
                 tg.close();
             }
+            // Открываем чат с ботом и передаём параметр history
             window.location.href = 'https://t.me/MyLoveMood_bot?start=history';
         });
         

@@ -140,19 +140,24 @@ telegram_app.add_handler(CommandHandler("delete", delete_mood))
 telegram_app.add_handler(CommandHandler("stats", stats_mood))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
 
-# Эндпоинт для вебхука Telegram (только один, НЕ async)
-# Эндпоинт для вебхука Telegram (с подробным логированием)
+# Эндпоинт для вебхука Telegram (асинхронный)
 @flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-@flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-
-def webhook():
+async def webhook():
     try:
-        # Простейший лог
-        print("Webhook получил запрос!")
+        json_data = request.get_json(force=True)
+        if not json_data:
+            logging.error("Получен пустой запрос от Telegram")
+            return 'Bad Request', 400
+        
+        logging.info(f"Получено обновление от Telegram: {json_data}")
+        
+        update = Update.de_json(json_data, telegram_app.bot)
+        await telegram_app.process_update(update)
+        
         return 'ok', 200
     except Exception as e:
-        print(f"Ошибка: {e}")
-        return 'ok', 200  # Всегда возвращаем 200
+        logging.error(f"Ошибка при обработке вебхука: {e}", exc_info=True)
+        return 'Internal Server Error', 500
 
 # Эндпоинты для мини-приложения
 @flask_app.route('/clear', methods=['POST'])
@@ -203,7 +208,6 @@ if __name__ == '__main__':
     # Устанавливаем вебхук
     webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
     try:
-        # Запускаем асинхронную установку вебхука
         asyncio.run(telegram_app.bot.set_webhook(url=webhook_url))
         print(f"✅ Webhook установлен на {webhook_url}")
     except Exception as e:
@@ -211,3 +215,4 @@ if __name__ == '__main__':
     
     # Запускаем Flask сервер
     flask_app.run(host='0.0.0.0', port=port)
+    

@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from telegram import Update, Bot
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import json
 import os
 from dotenv import load_dotenv
@@ -38,10 +38,6 @@ def save_moods(moods):
         json.dump(moods, f, ensure_ascii=False, indent=2)
 
 moods_data = load_moods()
-
-# ===== ИНИЦИАЛИЗАЦИЯ БОТА И ДИСПЕТЧЕРА =====
-bot = Bot(token=TELEGRAM_TOKEN)
-dispatcher = Dispatcher(bot, None, use_context=True)
 
 # ===== КОМАНДЫ ТЕЛЕГРАМ БОТА =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -128,25 +124,29 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logging.error(f"Ошибка в handle_web_app_data: {e}")
 
-# Регистрируем обработчики команд
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("history", history))
-dispatcher.add_handler(CommandHandler("clear", clear_history))
-dispatcher.add_handler(CommandHandler("delete", delete_mood))
-dispatcher.add_handler(CommandHandler("stats", stats_mood))
-dispatcher.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-
-# ===== FLASK СЕРВЕР =====
+# ===== FLASK СЕРВЕР С WEBHOOK =====
 flask_app = Flask(__name__)
 CORS(flask_app)
 
+# Создаём приложение Telegram
+telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
+
+# Добавляем обработчики
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(CommandHandler("history", history))
+telegram_app.add_handler(CommandHandler("clear", clear_history))
+telegram_app.add_handler(CommandHandler("delete", delete_mood))
+telegram_app.add_handler(CommandHandler("stats", stats_mood))
+telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
+
 # Эндпоинт для вебхука Telegram
 @flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-def webhook():
+async def webhook():
     if request.method == 'POST':
-        update = Update.de_json(request.get_json(force=True), bot)
-        dispatcher.process_update(update)
+        update = Update.de_json(request.get_json(force=True), telegram_app.bot)
+        await telegram_app.process_update(update)
         return 'ok', 200
+    return 'method not allowed', 405
 
 # Эндпоинты для мини-приложения
 @flask_app.route('/clear', methods=['POST'])
@@ -193,11 +193,16 @@ def index():
 # Устанавливаем вебхук при запуске
 def set_webhook():
     webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
-    bot.set_webhook(url=webhook_url)
+    telegram_app.bot.set_webhook(url=webhook_url)
     print(f"✅ Webhook установлен на {webhook_url}")
 
 # ===== ЗАПУСК =====
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    set_webhook()  
+    
+    # Устанавливаем вебхук
+    with flask_app.app_context():
+        set_webhook()
+    
+    # Запускаем Flask сервер
     flask_app.run(host='0.0.0.0', port=port)

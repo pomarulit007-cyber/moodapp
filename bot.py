@@ -8,6 +8,8 @@ import json
 import os
 import threading
 from dotenv import load_dotenv
+import httpx
+
 
 load_dotenv()
 
@@ -257,4 +259,5 @@ if __name__ == '__main__':
     
     print("✅ Бот и веб-сервер запущены!")
     print("🌐 Flask сервер на http://localhost:5000")
+
     telegram_app.run_polling()

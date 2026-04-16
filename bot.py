@@ -44,11 +44,83 @@ async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_moods(moods_data)
     
     await update.message.reply_text("✅ Вся история настроений очищена!")
+    
 
 
-telegram_app.add_handler(CommandHandler("clear", clear_history))
+ADMINS = ["1019422671"]  
 
-# Загружаем переменные из .env
+async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Очищает всю историю (только для админов)"""
+    user_id = str(update.effective_user.id)
+    
+    if user_id not in ADMINS:
+        await update.message.reply_text("❌ У тебя нет прав для этой команды.")
+        return
+    
+    global moods_data
+    moods_data = {}
+    save_moods(moods_data)
+    
+    await update.message.reply_text("✅ Вся история настроений очищена!")
+
+async def delete_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Удаляет конкретную запись по дате"""
+    user_id = str(update.effective_user.id)
+    
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Укажи дату в формате: /delete 16.04.2026 13:48\n\n"
+            "Пример: /delete 16.04.2026 13:48"
+        )
+        return
+    
+    date_str = " ".join(context.args)
+    
+    if user_id not in moods_data or date_str not in moods_data[user_id]:
+        await update.message.reply_text(f"❌ Запись на {date_str} не найдена.\n\n"
+                                       f"Посмотри /history для списка дат")
+        return
+    
+    del moods_data[user_id][date_str]
+    if not moods_data[user_id]:
+        del moods_data[user_id]
+    
+    save_moods(moods_data)
+    await update.message.reply_text(f"✅ Запись на {date_str} удалена!")
+
+async def stats_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показывает статистику настроений"""
+    user_id = str(update.effective_user.id)
+    
+    if user_id not in moods_data or not moods_data[user_id]:
+        await update.message.reply_text("📭 У тебя пока нет записей о настроении.")
+        return
+    
+    stats = {"happy": 0, "normal": 0, "sad": 0, "love": 0, "angry": 0}
+    
+    for mood in moods_data[user_id].values():
+        if mood in stats:
+            stats[mood] += 1
+    
+    emojis = {"happy": "😊", "normal": "😐", "sad": "😔", "love": "🥰", "angry": "😠"}
+    
+    message = "📊 *Твоя статистика настроений:*\n\n"
+    for mood, count in stats.items():
+        if count > 0:
+            percentage = (count / len(moods_data[user_id])) * 100
+            message += f"{emojis[mood]} {mood}: {count} раз ({percentage:.0f}%)\n"
+    
+    message += f"\n📝 Всего записей: {len(moods_data[user_id])}"
+    
+    await update.message.reply_text(message, parse_mode="Markdown")
+
+    telegram_app.add_handler(CommandHandler("clear", clear_history))
+    telegram_app.add_handler(CommandHandler("delete", delete_mood))
+    telegram_app.add_handler(CommandHandler("stats", stats_mood))
+
+
+    telegram_app.add_handler(CommandHandler("clear", clear_history))
+
 load_dotenv()
 
 # ===== НАСТРОЙКИ =====
@@ -255,6 +327,9 @@ if __name__ == '__main__':
     telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
     telegram_app.add_handler(CommandHandler("start", start))
     telegram_app.add_handler(CommandHandler("history", history))
+    telegram_app.add_handler(CommandHandler("clear", clear_history))
+    telegram_app.add_handler(CommandHandler("delete", delete_mood))
+    telegram_app.add_handler(CommandHandler("stats", stats_mood))
     telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     
     print("✅ Бот и веб-сервер запущены!")

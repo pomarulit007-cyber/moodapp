@@ -232,12 +232,19 @@
             statusDiv.innerHTML = `📤 Отправляю ${moodEmojis[mood]}...`;
             statusDiv.style.background = '#E3F2FD';
             
-            // Получаем ID пользователя из Telegram
+            // УЛУЧШЕННЫЙ способ получения ID пользователя
             let userId = 'unknown';
-            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                userId = String(tg.initDataUnsafe.user.id);
-                console.log('User ID:', userId);
+            if (tg && tg.initDataUnsafe) {
+                if (tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+                    userId = String(tg.initDataUnsafe.user.id);
+                } else if (tg.initDataUnsafe.query_id) {
+                    // Альтернативный способ
+                    console.log('Есть query_id, но нет user');
+                }
             }
+            
+            // ДИАГНОСТИКА: выводим в консоль, что получилось
+            console.log('Отправка настроения:', { mood, userId, tgExists: !!tg });
             
             // Отправляем на Flask сервер
             fetch('http://localhost:5000/mood', {

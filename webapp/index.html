@@ -175,6 +175,8 @@
             }
         }
     </style>
+    <!-- Принудительная загрузка Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
@@ -210,16 +212,16 @@
     </div>
 
     <script>
-        let tg = null;
-        
         // Инициализация Telegram WebApp
-        if (window.Telegram && window.Telegram.WebApp) {
-            tg = window.Telegram.WebApp;
+        let tg = window.Telegram.WebApp;
+        
+        if (tg) {
             tg.ready();
             tg.expand();
             console.log('✅ Telegram WebApp инициализирован');
+            console.log('User ID:', tg.initDataUnsafe?.user?.id);
         } else {
-            console.warn('⚠️ Telegram WebApp не обнаружен');
+            console.error('❌ Telegram WebApp не загрузился!');
         }
         
         // Функция отправки настроения через fetch
@@ -242,7 +244,7 @@
                 userId = String(tg.initDataUnsafe.user.id);
             }
             
-            console.log('Отправка настроения:', { mood, userId, tgExists: !!tg });
+            console.log('Отправка настроения:', { mood, userId });
             
             // Отправляем на Flask сервер
             fetch('http://localhost:5000/mood', {
@@ -286,23 +288,46 @@
             });
         });
         
-        // Кнопка очистки истории
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            console.log('🔍 Кнопка очистки нажата');
-            console.log('🔍 tg существует?', !!tg);
+        // Кнопка очистки истории (теперь через fetch на Flask)
+        document.getElementById('clearBtn').addEventListener('click', async () => {
+            if (!tg) {
+                console.error('Нет подключения к Telegram');
+                return;
+            }
             
-            if (tg) {
-                console.log('🔍 Отправляем clear...');
-                const data = JSON.stringify({ action: 'clear' });
-                console.log('🔍 Данные для отправки:', data);
-                tg.sendData(data);
-                console.log('🔍 sendData выполнен, закрываем...');
-                setTimeout(() => {
-                    tg.close();
-                }, 500);
-            } else {
-                console.warn('⚠️ Нет подключения к Telegram');
-                window.location.href = 'https://t.me/MyLoveMood_bot?start=clear';
+            const confirmed = confirm('⚠️ ТОЧНО удалить ВСЕ записи о настроении? Это нельзя отменить!');
+            if (!confirmed) return;
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '🗑️ Очищаю историю...';
+            statusDiv.style.background = '#E3F2FD';
+            
+            try {
+                const response = await fetch('http://localhost:5000/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: tg.initDataUnsafe?.user?.id || 'unknown'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    statusDiv.innerHTML = '✅ История очищена!';
+                    statusDiv.style.background = '#E8F5E9';
+                    setTimeout(() => {
+                        tg.close();
+                    }, 1000);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка очистки:', error);
+                statusDiv.innerHTML = '❌ Не удалось очистить историю';
+                statusDiv.style.background = '#FFEBEE';
             }
         });
         
@@ -311,8 +336,6 @@
             if (tg) {
                 tg.sendData(JSON.stringify({ action: 'history' }));
                 tg.close();
-            } else {
-                window.location.href = 'https://t.me/MyLoveMood_bot';
             }
         });
         

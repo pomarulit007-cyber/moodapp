@@ -9,51 +9,87 @@ import os
 import threading
 from dotenv import load_dotenv
 
+load_dotenv()
 
-with open('moods.json', 'r') as f:
-    data = json.load(f)
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+BOT_USERNAME = "MyLoveMood_bot"
 
-real_user_id = "1019422671"  
+if not TELEGRAM_TOKEN:
+    raise ValueError("Токен не найден! Создай файл .env с TELEGRAM_TOKEN=твой_токен")
 
-if "unknown" in data:
-    if real_user_id not in data:
-        data[real_user_id] = {}
-    data[real_user_id].update(data["unknown"])
-    del data["unknown"]
+WEBAPP_URL = "https://pomarulit007-cyber.github.io/moodapp/webapp/"
+MOODS_FILE = "moods.json"
 
-# Сохраняем обратно
-with open('moods.json', 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-print("✅ Готово!")
+def load_moods():
+    if os.path.exists(MOODS_FILE):
+        with open(MOODS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
 
-async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Очищает историю настроений (только для тебя)"""
+def save_moods(moods):
+    with open(MOODS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(moods, f, ensure_ascii=False, indent=2)
+
+moods_data = load_moods()
+
+
+REAL_USER_ID = "1019422671"
+
+if "unknown" in moods_data and REAL_USER_ID:
+    if REAL_USER_ID not in moods_data:
+        moods_data[REAL_USER_ID] = {}
+    moods_data[REAL_USER_ID].update(moods_data["unknown"])
+    del moods_data["unknown"]
+    save_moods(moods_data)
+    print("✅ Данные из 'unknown' перенесены в твой ID!")
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[
+        {"text": "🌸 Открыть дневник настроения", "web_app": {"url": WEBAPP_URL}}
+    ]]
+    reply_markup = {"inline_keyboard": keyboard}
+    
+    await update.message.reply_text(
+        "Привет, любимая! 🌷\n\n"
+        "Я буду запоминать твоё настроение каждый день.\n"
+        "Нажми на кнопку ниже, чтобы открыть дневник и выбрать смайлик:",
+        reply_markup=reply_markup
+    )
+
+async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     
-
-    ADMIN_ID = "1019422671"  
-    
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("❌ У тебя нет прав для этой команды.")
+    if user_id not in moods_data or not moods_data[user_id]:
+        await update.message.reply_text(
+            "📭 У тебя пока нет записей о настроении.\n"
+            "Нажми /start и открой дневник, чтобы начать!"
+        )
         return
     
-    # Очищаем данные
-    global moods_data
-    moods_data = {}
-    save_moods(moods_data)
+    user_moods = moods_data[user_id]
+    last_moods = list(user_moods.items())[-10:]
     
-    await update.message.reply_text("✅ Вся история настроений очищена!")
+    message = "📊 *Твои последние настроения:*\n\n"
+    for date, mood in last_moods:
+        mood_emoji = {
+            "happy": "😊", "normal": "😐", "sad": "😔", 
+            "love": "🥰", "angry": "😠"
+        }.get(mood, "❓")
+        message += f"• {date}: {mood_emoji}\n"
     
-
-
-ADMINS = ["1019422671"]  
+    await update.message.reply_text(message, parse_mode="Markdown")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Очищает всю историю (только для админов)"""
+    """Очищает всю историю (только для админа)"""
     user_id = str(update.effective_user.id)
+    ADMIN_ID = "1019422671"  # Твой Telegram ID
     
-    if user_id not in ADMINS:
+    if user_id != ADMIN_ID:
         await update.message.reply_text("❌ У тебя нет прав для этой команды.")
         return
     
@@ -114,90 +150,14 @@ async def stats_mood(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message, parse_mode="Markdown")
 
-    telegram_app.add_handler(CommandHandler("clear", clear_history))
-    telegram_app.add_handler(CommandHandler("delete", delete_mood))
-    telegram_app.add_handler(CommandHandler("stats", stats_mood))
-
-
-    telegram_app.add_handler(CommandHandler("clear", clear_history))
-
-load_dotenv()
-
-# ===== НАСТРОЙКИ =====
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-BOT_USERNAME = "MyLoveMood_bot"
-
-if not TELEGRAM_TOKEN:
-    raise ValueError("Токен не найден! Создай файл .env с TELEGRAM_TOKEN=твой_токен")
-
-WEBAPP_URL = "https://pomarulit007-cyber.github.io/moodapp/webapp/"
-MOODS_FILE = "moods.json"
-
-# ===== НАСТРОЙКА ЛОГИРОВАНИЯ =====
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-# ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ДАННЫМИ =====
-def load_moods():
-    if os.path.exists(MOODS_FILE):
-        with open(MOODS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
-
-def save_moods(moods):
-    with open(MOODS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(moods, f, ensure_ascii=False, indent=2)
-
-moods_data = load_moods()
-
-# ===== КОМАНДЫ ТЕЛЕГРАМ БОТА =====
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[
-        {"text": "🌸 Открыть дневник настроения", "web_app": {"url": WEBAPP_URL}}
-    ]]
-    reply_markup = {"inline_keyboard": keyboard}
-    
-    await update.message.reply_text(
-        "Привет, любимая! 🌷\n\n"
-        "Я буду запоминать твоё настроение каждый день.\n"
-        "Нажми на кнопку ниже, чтобы открыть дневник и выбрать смайлик:",
-        reply_markup=reply_markup
-    )
-
-async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    
-    if user_id not in moods_data or not moods_data[user_id]:
-        await update.message.reply_text(
-            "📭 У тебя пока нет записей о настроении.\n"
-            "Нажми /start и открой дневник, чтобы начать!"
-        )
-        return
-    
-    user_moods = moods_data[user_id]
-    last_moods = list(user_moods.items())[-10:]
-    
-    message = "📊 *Твои последние настроения:*\n\n"
-    for date, mood in last_moods:
-        mood_emoji = {
-            "happy": "😊", "normal": "😐", "sad": "😔", 
-            "love": "🥰", "angry": "😠"
-        }.get(mood, "❓")
-        message += f"• {date}: {mood_emoji}\n"
-    
-    await update.message.reply_text(message, parse_mode="Markdown")
-
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает данные из мини-приложения"""
     try:
         data = json.loads(update.effective_message.web_app_data.data)
         
-        # ===== ОБРАБОТКА ОЧИСТКИ ИСТОРИИ (ДОБАВЬ ЭТО ПЕРВЫМ) =====
         if data.get('action') == 'clear':
             user_id = str(update.effective_user.id)
-            # Замени на свой Telegram ID (узнай у @userinfobot)
-            ADMIN_ID = "123456789"  # ← ВСТАВЬ СВОЙ ID!
+            ADMIN_ID = "1019422671"  # Твой Telegram ID
             
             if user_id != ADMIN_ID:
                 await update.message.reply_text("❌ У тебя нет прав для очистки.")
@@ -209,7 +169,6 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text("✅ Вся история настроений очищена!")
             return
         
-        # ===== ОБРАБОТКА КОМАНДЫ ИСТОРИИ =====
         if data.get('action') == 'history':
             user_id = str(update.effective_user.id)
             if user_id in moods_data and moods_data[user_id]:
@@ -227,7 +186,6 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_text("📭 У тебя пока нет записей о настроении.")
             return
         
-        # ===== ОБРАБОТКА НАСТРОЕНИЯ =====
         mood = data.get('mood')
         mood_emoji = data.get('mood_emoji', '❓')
         timestamp = data.get('timestamp', datetime.now().isoformat())
@@ -239,39 +197,37 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
             moods_data[user_id] = {}
         moods_data[user_id][date_str] = mood
         save_moods(moods_data)
+        
+        print(f"✅ Сохранено через sendData: {user_id} -> {mood} в {date_str}")
         
         await update.message.reply_text(f"✅ Твоё настроение {mood_emoji} сохранено! ❤️")
         
     except Exception as e:
-        logging.error(f"Ошибка: {e}")
-        await update.message.reply_text("❌ Не удалось сохранить настроение")
-        
-        
-        # Обработка настроения
-        mood = data.get('mood')
-        mood_emoji = data.get('mood_emoji', '❓')
-        timestamp = data.get('timestamp', datetime.now().isoformat())
-        user_id = str(update.effective_user.id)
-        
-        date_str = datetime.fromisoformat(timestamp).strftime("%d.%m.%Y %H:%M")
-        
-        if user_id not in moods_data:
-            moods_data[user_id] = {}
-        moods_data[user_id][date_str] = mood
-        save_moods(moods_data)
-        
-        print(f"✅ Сохранено: {user_id} -> {mood} в {date_str}")
-        
-        await update.message.reply_text(
-            f"✅ Твоё настроение {mood_emoji} сохранено! ❤️"
-        )
-    except Exception as e:
-        logging.error(f"Ошибка: {e}")
+        logging.error(f"Ошибка в handle_web_app_data: {e}")
         await update.message.reply_text("❌ Не удалось сохранить настроение")
 
-# ===== FLASK СЕРВЕР (для приёма данных через fetch) =====
 flask_app = Flask(__name__)
 CORS(flask_app)
+
+@flask_app.route('/clear', methods=['POST'])
+def clear_history_flask():
+    try:
+        data = request.json
+        user_id = str(data.get('user_id'))
+        ADMIN_ID = "1019422671"
+        
+        if user_id != ADMIN_ID:
+            return jsonify({"status": "error", "message": "Нет прав"}), 403
+        
+        global moods_data
+        moods_data = {}
+        save_moods(moods_data)
+        
+        print(f"✅ История очищена пользователем {user_id}")
+        return jsonify({"status": "ok", "message": "История очищена"}), 200
+    except Exception as e:
+        logging.error(f"Ошибка очистки: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @flask_app.route('/mood', methods=['POST', 'OPTIONS'])
 def receive_mood():
@@ -295,15 +251,8 @@ def receive_mood():
         
         return jsonify({"status": "ok", "message": "Настроение сохранено"}), 200
     except Exception as e:
-        logging.error(f"Ошибка: {e}")
+        logging.error(f"Ошибка в Flask: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-
-@flask_app.route('/history', methods=['GET'])
-def get_history():
-    user_id = request.args.get('user_id', '')
-    if user_id in moods_data:
-        return jsonify(moods_data[user_id]), 200
-    return jsonify({}), 200
 
 @flask_app.route('/health', methods=['GET'])
 def health():
@@ -312,19 +261,21 @@ def health():
 def run_flask():
     flask_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
-# ===== ЗАПУСК =====
 if __name__ == '__main__':
-    # Запускаем Flask в отдельном потоке
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
     
-    # Запускаем Telegram бота
     print("🤖 Запускаю бота...")
     print(f"📱 Твой бот: @{BOT_USERNAME}")
     print("🛑 Для остановки нажми Ctrl+C")
     
     telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
+    async def log_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        print(f"🔍 Получено сообщение: {update}")
+        if update.message and update.message.web_app_data:
+            print(f"🔍 WebAppData: {update.message.web_app_data.data}")
+    telegram_app.add_handler(MessageHandler(filters.ALL, log_all), group=-1)
     telegram_app.add_handler(CommandHandler("start", start))
     telegram_app.add_handler(CommandHandler("history", history))
     telegram_app.add_handler(CommandHandler("clear", clear_history))
@@ -332,6 +283,9 @@ if __name__ == '__main__':
     telegram_app.add_handler(CommandHandler("stats", stats_mood))
     telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     
+    
     print("✅ Бот и веб-сервер запущены!")
     print("🌐 Flask сервер на http://localhost:5000")
     telegram_app.run_polling()
+
+    

@@ -7,15 +7,18 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import json
 import os
 import threading
+from dotenv import load_dotenv
 
-# ===== НАСТРОЙКИ =====
-TELEGRAM_TOKEN = "8616373339:AAEcz6kNWt_qMwYoesfzinvj0y-bqeFGG2k"
+load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 BOT_USERNAME = "MyLoveMood_bot"
 
-# Адрес твоего мини-аппа на GitHub Pages
+if not TELEGRAM_TOKEN:
+    raise ValueError("Токен не найден! Создай файл .env с TELEGRAM_TOKEN=твой_токен")
+
 WEBAPP_URL = "https://pomarulit007-cyber.github.io/moodapp/webapp/"
 
-# Файл для хранения настроений
 MOODS_FILE = "moods.json"
 
 # ===== НАСТРОЙКА ЛОГИРОВАНИЯ =====
@@ -75,9 +78,26 @@ async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown")
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает данные из мини-приложения, отправленные через sendData"""
+    """Обрабатывает данные из мини-приложения"""
     try:
         data = json.loads(update.effective_message.web_app_data.data)
+        
+        # Обработка команды истории
+        if data.get('action') == 'history':
+            user_id = str(update.effective_user.id)
+            if user_id in moods_data and moods_data[user_id]:
+                user_moods = moods_data[user_id]
+                last_moods = list(user_moods.items())[-10:]
+                message = "📊 *Твои последние настроения:*\n\n"
+                for date, mood in last_moods:
+                    mood_emoji = {"happy": "😊", "normal": "😐", "sad": "😔", "love": "🥰", "angry": "😠"}.get(mood, "❓")
+                    message += f"• {date}: {mood_emoji}\n"
+                await update.message.reply_text(message, parse_mode="Markdown")
+            else:
+                await update.message.reply_text("📭 У тебя пока нет записей о настроении.")
+            return
+        
+        # Обработка настроения
         mood = data.get('mood')
         mood_emoji = data.get('mood_emoji', '❓')
         timestamp = data.get('timestamp', datetime.now().isoformat())
@@ -90,14 +110,11 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
         moods_data[user_id][date_str] = mood
         save_moods(moods_data)
         
-        print(f"✅ Сохранено через sendData: {user_id} -> {mood} ({mood_emoji}) в {date_str}")
+        await update.message.reply_text(f"✅ Твоё настроение {mood_emoji} сохранено! ❤️")
         
-        await update.message.reply_text(
-            f"✅ Твоё настроение {mood_emoji} сохранено! Спасибо, что поделилась ❤️"
-        )
     except Exception as e:
-        logging.error(f"Ошибка обработки данных: {e}")
-        await update.message.reply_text("❌ Не удалось сохранить настроение. Попробуй ещё раз.")
+        logging.error(f"Ошибка: {e}")
+        await update.message.reply_text("❌ Не удалось сохранить настроение")
 
 # ===== FLASK СЕРВЕР (оставлен для совместимости, но sendData не требует его) =====
 flask_app = Flask(__name__)

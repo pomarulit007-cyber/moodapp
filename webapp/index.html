@@ -192,8 +192,9 @@
             <button class="mood-btn" data-mood="love" title="Влюблена">🥰</button>
             <button class="mood-btn" data-mood="angry" title="Злюсь">😠</button>
         </div>
+        
         <button class="history-btn" id="clearBtn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); margin-top: 10px;">
-    🗑️ Очистить все записи
+            🗑️ Очистить все записи
         </button>
         
         <button class="history-btn" id="historyBtn">
@@ -235,28 +236,12 @@
             statusDiv.innerHTML = `📤 Отправляю ${moodEmojis[mood]}...`;
             statusDiv.style.background = '#E3F2FD';
             
-            // УЛУЧШЕННЫЙ способ получения ID пользователя
+            // Получение ID пользователя
             let userId = 'unknown';
-            if (tg && tg.initDataUnsafe) {
-                if (tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-                    userId = String(tg.initDataUnsafe.user.id);
-                } else if (tg.initDataUnsafe.query_id) {
-                    // Альтернативный способ
-                    console.log('Есть query_id, но нет user');
-                }
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                userId = String(tg.initDataUnsafe.user.id);
             }
             
-
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            if (tg) {
-                if (confirm('Точно удалить ВСЕ записи о настроении?')) {
-                    tg.sendData(JSON.stringify({ action: 'clear' }));
-                    tg.close();
-                }
-            }
-        });
-
-            // ДИАГНОСТИКА: выводим в консоль, что получилось
             console.log('Отправка настроения:', { mood, userId, tgExists: !!tg });
             
             // Отправляем на Flask сервер
@@ -301,10 +286,19 @@
             });
         });
         
+        // Кнопка очистки истории
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (tg) {
+                if (confirm('⚠️ Точно удалить ВСЕ записи о настроении? Это нельзя отменить!')) {
+                    tg.sendData(JSON.stringify({ action: 'clear' }));
+                    tg.close();
+                }
+            }
+        });
+        
         // Кнопка истории
         document.getElementById('historyBtn').addEventListener('click', () => {
             if (tg) {
-                // Отправляем команду /history через sendData
                 tg.sendData(JSON.stringify({ action: 'history' }));
                 tg.close();
             } else {

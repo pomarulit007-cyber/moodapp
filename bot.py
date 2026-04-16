@@ -143,28 +143,16 @@ telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handl
 # Эндпоинт для вебхука Telegram (только один, НЕ async)
 # Эндпоинт для вебхука Telegram (с подробным логированием)
 @flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
+@flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
+
 def webhook():
     try:
-        # Получаем данные от Telegram
-        json_data = request.get_json(force=True)
-        if not json_data:
-            logging.error("Получен пустой запрос от Telegram")
-            return 'Bad Request', 400
-            
-        # Логируем входящее обновление (для отладки)
-        logging.info(f"Получено обновление от Telegram: {json_data}")
-        
-        # Создаем объект Update
-        update = Update.de_json(json_data, telegram_app.bot)
-        
-        # Обрабатываем обновление (этот метод синхронный в вашей версии библиотеки)
-        telegram_app.process_update(update)
-        
+        # Простейший лог
+        print("Webhook получил запрос!")
         return 'ok', 200
     except Exception as e:
-        # Логируем ошибку с подробной информацией
-        logging.error(f"Ошибка при обработке вебхука: {e}", exc_info=True)
-        return 'Internal Server Error', 500
+        print(f"Ошибка: {e}")
+        return 'ok', 200  # Всегда возвращаем 200
 
 # Эндпоинты для мини-приложения
 @flask_app.route('/clear', methods=['POST'])

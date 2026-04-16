@@ -129,7 +129,7 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
 flask_app = Flask(__name__)
 CORS(flask_app)
 
-# Создаём приложение Telegram
+# Создаём и инициализируем приложение Telegram
 telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
 
 # Добавляем обработчики
@@ -140,7 +140,7 @@ telegram_app.add_handler(CommandHandler("delete", delete_mood))
 telegram_app.add_handler(CommandHandler("stats", stats_mood))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
 
-# Эндпоинт для вебхука Telegram (асинхронный)
+# Эндпоинт для вебхука Telegram
 @flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
 async def webhook():
     try:
@@ -149,7 +149,7 @@ async def webhook():
             logging.error("Получен пустой запрос от Telegram")
             return 'Bad Request', 400
         
-        logging.info(f"Получено обновление от Telegram: {json_data}")
+        logging.info(f"Получено обновление от Telegram")
         
         update = Update.de_json(json_data, telegram_app.bot)
         await telegram_app.process_update(update)
@@ -205,14 +205,18 @@ def index():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     
-    # Устанавливаем вебхук
-    webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
-    try:
-        asyncio.run(telegram_app.bot.set_webhook(url=webhook_url))
+    # Инициализируем приложение Telegram
+    async def init_and_run():
+        await telegram_app.initialize()
+        await telegram_app.start()
+        
+        # Устанавливаем вебхук
+        webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
+        await telegram_app.bot.set_webhook(url=webhook_url)
         print(f"✅ Webhook установлен на {webhook_url}")
-    except Exception as e:
-        print(f"❌ Ошибка установки вебхука: {e}")
+        
+        # Запускаем Flask сервер (в отдельном потоке, так как он блокирующий)
+        await asyncio.to_thread(flask_app.run, host='0.0.0.0', port=port)
     
-    # Запускаем Flask сервер
-    flask_app.run(host='0.0.0.0', port=port)
-    
+    # Запускаем асинхронную инициализацию
+    asyncio.run(init_and_run())

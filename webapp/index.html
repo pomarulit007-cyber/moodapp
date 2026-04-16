@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Дневник настроения ❤️</title>
@@ -12,7 +11,7 @@
             box-sizing: border-box;
         }
 
-        body { 
+        body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -21,7 +20,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
         }
-        
 
         .container {
             background: rgba(255, 255, 255, 0.95);
@@ -179,7 +177,6 @@
     </style>
 </head>
 <body>
-    <div id="debug" style="background:yellow; padding:5px; font-size:10px; display:none;"></div>
     <div class="container">
         <h1>
             <span>🌸</span>
@@ -209,18 +206,19 @@
     </div>
 
     <script>
-        // Получаем данные о пользователе из Telegram WebApp
-        let tg = window.Telegram?.WebApp;
+        let tg = null;
         
-        if (tg) {
+        // Инициализация Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
-            console.log('Telegram WebApp инициализирован');
+            console.log('✅ Telegram WebApp инициализирован');
         } else {
-            console.warn('Telegram WebApp не обнаружен');
+            console.warn('⚠️ Telegram WebApp не обнаружен');
         }
         
-        // Функция отправки настроения через sendData
+        // Функция отправки настроения через fetch
         function sendMood(mood) {
             const statusDiv = document.getElementById('status');
             const moodEmojis = {
@@ -234,26 +232,45 @@
             statusDiv.innerHTML = `📤 Отправляю ${moodEmojis[mood]}...`;
             statusDiv.style.background = '#E3F2FD';
             
-            if (window.Telegram && window.Telegram.WebApp) {
-                const data = JSON.stringify({
-                    mood: mood,
-                    mood_emoji: moodEmojis[mood],
-                    timestamp: new Date().toISOString()
-                });
-                
-                window.Telegram.WebApp.sendData(data);
-                
-                statusDiv.innerHTML = `✅ ${moodEmojis[mood]} Отправлено! Спасибо ❤️`;
-                statusDiv.style.background = '#E8F5E9';
-                statusDiv.classList.add('success-animation');
-                
-                setTimeout(() => {
-                    window.Telegram.WebApp.close();
-                }, 1000);
-            } else {
-                statusDiv.innerHTML = '❌ Ошибка: не удалось подключиться к Telegram';
-                statusDiv.style.background = '#FFEBEE';
+            // Получаем ID пользователя из Telegram
+            let userId = 'unknown';
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                userId = String(tg.initDataUnsafe.user.id);
+                console.log('User ID:', userId);
             }
+            
+            // Отправляем на Flask сервер
+            fetch('http://localhost:5000/mood', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    mood: mood,
+                    timestamp: new Date().toISOString()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    statusDiv.innerHTML = `✅ ${moodEmojis[mood]} Сохранено! ❤️`;
+                    statusDiv.style.background = '#E8F5E9';
+                    statusDiv.classList.add('success-animation');
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '✨ Нажми на смайлик, чтобы поделиться настроением ✨';
+                        statusDiv.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)';
+                        statusDiv.classList.remove('success-animation');
+                    }, 2000);
+                } else {
+                    throw new Error(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                statusDiv.innerHTML = '❌ Не удалось сохранить. Проверь, что бот запущен.';
+                statusDiv.style.background = '#FFEBEE';
+            });
         }
         
         // Навешиваем обработчики на кнопки настроения
@@ -267,12 +284,11 @@
         // Кнопка истории
         document.getElementById('historyBtn').addEventListener('click', () => {
             if (tg) {
-                // Отправляем команду боту через WebApp
+                // Отправляем команду /history через sendData
                 tg.sendData(JSON.stringify({ action: 'history' }));
                 tg.close();
             } else {
-                // Запасной вариант
-                window.location.href = `https://t.me/MyLoveMood_bot?command=history`;
+                window.location.href = 'https://t.me/MyLoveMood_bot';
             }
         });
         
@@ -295,26 +311,7 @@
             });
         });
         
-            console.log('🌸 Дневник настроения загружен!');
-            // Диагностика
-    const debugDiv = document.getElementById('debug');
-    function logDebug(msg) {
-        console.log(msg);
-        if (debugDiv) {
-            debugDiv.style.display = 'block';
-            debugDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
-        }
-    }
-
-    logDebug('Страница загружена');
-    logDebug('window.Telegram = ' + (window.Telegram ? 'есть' : 'нет'));
-    logDebug('window.Telegram?.WebApp = ' + (window.Telegram?.WebApp ? 'есть' : 'нет'));
-
-    if (!window.Telegram?.WebApp) {
-        logDebug('⚠️ ОШИБКА: Telegram WebApp не обнаружен!');
-        logDebug('Убедись, что открываешь приложение через кнопку бота в Telegram');
-    }
+        console.log('🌸 Дневник настроения загружен!');
     </script>
 </body>
 </html>
-

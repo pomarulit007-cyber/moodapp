@@ -9,8 +9,10 @@ import os
 import threading
 from dotenv import load_dotenv
 
+# Загружаем переменные из .env
 load_dotenv()
 
+# ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 BOT_USERNAME = "MyLoveMood_bot"
 
@@ -18,7 +20,6 @@ if not TELEGRAM_TOKEN:
     raise ValueError("Токен не найден! Создай файл .env с TELEGRAM_TOKEN=твой_токен")
 
 WEBAPP_URL = "https://pomarulit007-cyber.github.io/moodapp/webapp/"
-
 MOODS_FILE = "moods.json"
 
 # ===== НАСТРОЙКА ЛОГИРОВАНИЯ =====
@@ -77,8 +78,8 @@ async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message, parse_mode="Markdown")
 
+# ===== ОБРАБОТЧИК ДАННЫХ ИЗ МИНИ-АППА =====
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает данные из мини-приложения"""
     try:
         data = json.loads(update.effective_message.web_app_data.data)
         
@@ -90,7 +91,10 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 last_moods = list(user_moods.items())[-10:]
                 message = "📊 *Твои последние настроения:*\n\n"
                 for date, mood in last_moods:
-                    mood_emoji = {"happy": "😊", "normal": "😐", "sad": "😔", "love": "🥰", "angry": "😠"}.get(mood, "❓")
+                    mood_emoji = {
+                        "happy": "😊", "normal": "😐", "sad": "😔",
+                        "love": "🥰", "angry": "😠"
+                    }.get(mood, "❓")
                     message += f"• {date}: {mood_emoji}\n"
                 await update.message.reply_text(message, parse_mode="Markdown")
             else:
@@ -110,18 +114,24 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
         moods_data[user_id][date_str] = mood
         save_moods(moods_data)
         
-        await update.message.reply_text(f"✅ Твоё настроение {mood_emoji} сохранено! ❤️")
-        #test
+        print(f"✅ Сохранено: {user_id} -> {mood} в {date_str}")
+        
+        await update.message.reply_text(
+            f"✅ Твоё настроение {mood_emoji} сохранено! ❤️"
+        )
     except Exception as e:
         logging.error(f"Ошибка: {e}")
         await update.message.reply_text("❌ Не удалось сохранить настроение")
 
-# ===== FLASK СЕРВЕР (оставлен для совместимости, но sendData не требует его) =====
+# ===== FLASK СЕРВЕР (для приёма данных через fetch) =====
 flask_app = Flask(__name__)
 CORS(flask_app)
 
-@flask_app.route('/mood', methods=['POST'])
+@flask_app.route('/mood', methods=['POST', 'OPTIONS'])
 def receive_mood():
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     try:
         data = request.json
         user_id = str(data.get('user_id'))
@@ -174,6 +184,5 @@ if __name__ == '__main__':
     telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     
     print("✅ Бот и веб-сервер запущены!")
+    print("🌐 Flask сервер на http://localhost:5000")
     telegram_app.run_polling()
-    
-    

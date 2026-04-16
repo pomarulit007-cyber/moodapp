@@ -288,11 +288,21 @@
         
         // Кнопка очистки истории
         document.getElementById('clearBtn').addEventListener('click', () => {
+            console.log('🔍 Кнопка очистки нажата');
+            console.log('🔍 tg существует?', !!tg);
+            
             if (tg) {
-                if (confirm('⚠️ Точно удалить ВСЕ записи о настроении? Это нельзя отменить!')) {
-                    tg.sendData(JSON.stringify({ action: 'clear' }));
+                console.log('🔍 Отправляем clear...');
+                const data = JSON.stringify({ action: 'clear' });
+                console.log('🔍 Данные для отправки:', data);
+                tg.sendData(data);
+                console.log('🔍 sendData выполнен, закрываем...');
+                setTimeout(() => {
                     tg.close();
-                }
+                }, 500);
+            } else {
+                console.warn('⚠️ Нет подключения к Telegram');
+                window.location.href = 'https://t.me/MyLoveMood_bot?start=clear';
             }
         });
         

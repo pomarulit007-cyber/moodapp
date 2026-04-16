@@ -27,6 +27,27 @@ with open('moods.json', 'w', encoding='utf-8') as f:
 
 print("✅ Готово!")
 
+async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Очищает историю настроений (только для тебя)"""
+    user_id = str(update.effective_user.id)
+    
+
+    ADMIN_ID = "1019422671"  
+    
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ У тебя нет прав для этой команды.")
+        return
+    
+    # Очищаем данные
+    global moods_data
+    moods_data = {}
+    save_moods(moods_data)
+    
+    await update.message.reply_text("✅ Вся история настроений очищена!")
+
+
+telegram_app.add_handler(CommandHandler("clear", clear_history))
+
 # Загружаем переменные из .env
 load_dotenv()
 
@@ -96,12 +117,27 @@ async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message, parse_mode="Markdown")
 
-# ===== ОБРАБОТЧИК ДАННЫХ ИЗ МИНИ-АППА =====
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         data = json.loads(update.effective_message.web_app_data.data)
         
-        # Обработка команды истории
+        # ===== ОБРАБОТКА ОЧИСТКИ ИСТОРИИ (ДОБАВЬ ЭТО ПЕРВЫМ) =====
+        if data.get('action') == 'clear':
+            user_id = str(update.effective_user.id)
+            # Замени на свой Telegram ID (узнай у @userinfobot)
+            ADMIN_ID = "123456789"  # ← ВСТАВЬ СВОЙ ID!
+            
+            if user_id != ADMIN_ID:
+                await update.message.reply_text("❌ У тебя нет прав для очистки.")
+                return
+            
+            global moods_data
+            moods_data = {}
+            save_moods(moods_data)
+            await update.message.reply_text("✅ Вся история настроений очищена!")
+            return
+        
+        # ===== ОБРАБОТКА КОМАНДЫ ИСТОРИИ =====
         if data.get('action') == 'history':
             user_id = str(update.effective_user.id)
             if user_id in moods_data and moods_data[user_id]:
@@ -118,6 +154,26 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
             else:
                 await update.message.reply_text("📭 У тебя пока нет записей о настроении.")
             return
+        
+        # ===== ОБРАБОТКА НАСТРОЕНИЯ =====
+        mood = data.get('mood')
+        mood_emoji = data.get('mood_emoji', '❓')
+        timestamp = data.get('timestamp', datetime.now().isoformat())
+        user_id = str(update.effective_user.id)
+        
+        date_str = datetime.fromisoformat(timestamp).strftime("%d.%m.%Y %H:%M")
+        
+        if user_id not in moods_data:
+            moods_data[user_id] = {}
+        moods_data[user_id][date_str] = mood
+        save_moods(moods_data)
+        
+        await update.message.reply_text(f"✅ Твоё настроение {mood_emoji} сохранено! ❤️")
+        
+    except Exception as e:
+        logging.error(f"Ошибка: {e}")
+        await update.message.reply_text("❌ Не удалось сохранить настроение")
+        
         
         # Обработка настроения
         mood = data.get('mood')

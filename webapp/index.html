@@ -192,6 +192,9 @@
             <button class="mood-btn" data-mood="love" title="Влюблена">🥰</button>
             <button class="mood-btn" data-mood="angry" title="Злюсь">😠</button>
         </div>
+        <button class="history-btn" id="clearBtn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); margin-top: 10px;">
+    🗑️ Очистить все записи
+        </button>
         
         <button class="history-btn" id="historyBtn">
             📅 Посмотреть историю
@@ -243,6 +246,16 @@
                 }
             }
             
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (tg) {
+                if (confirm('Точно удалить ВСЕ записи о настроении?')) {
+                    tg.sendData(JSON.stringify({ action: 'clear' }));
+                    tg.close();
+                }
+            }
+        });
+
             // ДИАГНОСТИКА: выводим в консоль, что получилось
             console.log('Отправка настроения:', { mood, userId, tgExists: !!tg });
             

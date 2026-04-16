@@ -9,6 +9,24 @@ import os
 import threading
 from dotenv import load_dotenv
 
+
+with open('moods.json', 'r') as f:
+    data = json.load(f)
+
+real_user_id = "1019422671"  
+
+if "unknown" in data:
+    if real_user_id not in data:
+        data[real_user_id] = {}
+    data[real_user_id].update(data["unknown"])
+    del data["unknown"]
+
+# Сохраняем обратно
+with open('moods.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+print("✅ Готово!")
+
 # Загружаем переменные из .env
 load_dotenv()
 

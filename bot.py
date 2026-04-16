@@ -111,7 +111,7 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
         save_moods(moods_data)
         
         await update.message.reply_text(f"✅ Твоё настроение {mood_emoji} сохранено! ❤️")
-        
+        #test
     except Exception as e:
         logging.error(f"Ошибка: {e}")
         await update.message.reply_text("❌ Не удалось сохранить настроение")

@@ -7,7 +7,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import json
 import os
 from dotenv import load_dotenv
-
+import asyncio
 
 load_dotenv()
 
@@ -140,12 +140,13 @@ telegram_app.add_handler(CommandHandler("delete", delete_mood))
 telegram_app.add_handler(CommandHandler("stats", stats_mood))
 telegram_app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
 
-# Эндпоинт для вебхука Telegram
+# Эндпоинт для вебхука Telegram (только один, НЕ async)
 @flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-async def webhook():
+def webhook():
     if request.method == 'POST':
         update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-        await telegram_app.process_update(update)
+        # process_update НЕ асинхронный в этой версии библиотеки
+        telegram_app.process_update(update)
         return 'ok', 200
     return 'method not allowed', 405
 
@@ -191,23 +192,18 @@ def health():
 def index():
     return jsonify({"status": "ok", "message": "Бот для дневника настроения работает"}), 200
 
-# Устанавливаем вебхук при запуске
-@flask_app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
-def webhook():  # <-- Убрали async
-    if request.method == 'POST':
-        update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-        telegram_app.process_update(update)  # <-- Убрали await
-        return 'ok', 200
-    return 'method not allowed', 405
-
 # ===== ЗАПУСК =====
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     
-    import asyncio
+    # Устанавливаем вебхук
     webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
-    asyncio.run(telegram_app.bot.set_webhook(url=webhook_url))
-    print(f"✅ Webhook установлен на {webhook_url}")
+    try:
+        # Запускаем асинхронную установку вебхука
+        asyncio.run(telegram_app.bot.set_webhook(url=webhook_url))
+        print(f"✅ Webhook установлен на {webhook_url}")
+    except Exception as e:
+        print(f"❌ Ошибка установки вебхука: {e}")
     
     # Запускаем Flask сервер
     flask_app.run(host='0.0.0.0', port=port)

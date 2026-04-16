@@ -200,9 +200,10 @@ def set_webhook():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     
-    # Устанавливаем вебхук
-    with flask_app.app_context():
-        set_webhook()
+    # Устанавливаем вебхук ДО запуска Flask
+    webhook_url = f"https://moodapp-tszs.onrender.com/webhook/{TELEGRAM_TOKEN}"
+    telegram_app.bot.set_webhook(url=webhook_url)
+    print(f"✅ Webhook установлен на {webhook_url}")
     
     # Запускаем Flask сервер
     flask_app.run(host='0.0.0.0', port=port)
